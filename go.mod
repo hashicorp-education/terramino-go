@@ -1,4 +1,4 @@
-module github.com/brianmmcclain/terraminogo
+module github.com/hashicorp-education/terraminogo
 
 go 1.22.1
 

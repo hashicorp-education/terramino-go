@@ -12,7 +12,7 @@ import (
 	"strings"
 	"text/template"
 
-	terraminogo "github.com/brianmmcclain/terraminogo/internal"
+	terraminogo "github.com/hashicorp-education/terraminogo/internal"
 	"github.com/redis/go-redis/v9"
 )
 
