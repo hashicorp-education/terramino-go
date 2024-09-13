@@ -5,6 +5,32 @@ const SCORE_NEWTETROMINO = 10;
 const SCORE_CLEARLINE = 100;
 updateScore();
 
+function updateHighScoreUI() {
+  // Update UI
+  scoreSpan = document.getElementById("highscore");
+  if (this.status == 200) {
+    scoreSpan.innerText = this.responseText
+  } else {
+    scoreSpan.innerText = "ERROR"
+  }
+}
+
+function getHighScore() {
+  url = window.location.href + "score";
+  var req = new XMLHttpRequest();
+  req.onload = updateHighScoreUI
+  req.open("GET", url, true);
+  req.send(null);
+}
+
+function setHighScore() {
+  url = window.location.href + "score";
+  var req = new XMLHttpRequest();
+  req.onload = updateHighScoreUI
+  req.open("POST", url, true);
+  req.send(score);
+}
+
 function updateScore() {
     scoreSpan = document.getElementById("score");
     scoreSpan.innerText = score;
@@ -140,7 +166,8 @@ function addScore(points) {
         context.textBaseline = "middle";
         context.fillText("GAME OVER!", canvas.width / 2, canvas.height / 2);
 
-        
+        // Send new hight score
+        setHighScore();        
       }
   
       const canvas = document.getElementById("game");
@@ -276,4 +303,5 @@ function addScore(points) {
       });
   
       // start the game
+      getHighScore()
       rAF = requestAnimationFrame(loop);

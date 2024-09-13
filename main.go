@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"text/template"
 
 	terraminogo "github.com/brianmmcclain/terraminogo/internal"
@@ -17,12 +18,14 @@ import (
 type TerraminoData struct {
 	HVSClient   *terraminogo.HVSClient
 	RedisClient *redis.Client
+	ctx         context.Context
 }
 
 func main() {
 	t := &TerraminoData{}
 	t.HVSClient = terraminogo.NewHVSClient()
 	t.RedisClient = nil
+	t.ctx = context.Background()
 
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/env", envHandler)
@@ -73,6 +76,7 @@ func (t *TerraminoData) highScoreHandler(w http.ResponseWriter, r *http.Request)
 		if err != nil {
 			// No host defined, return an error
 			w.WriteHeader(500)
+			return
 		}
 		// Otherwise, we should have one available, get the rest of the connection info
 		redisPort, _ := t.HVSClient.GetSecret("terramino", "redis_port")
@@ -83,25 +87,36 @@ func (t *TerraminoData) highScoreHandler(w http.ResponseWriter, r *http.Request)
 		})
 	}
 
-	ctx := context.Background()
-
 	if r.Method == "GET" {
-		val, err := t.RedisClient.Get(ctx, "score").Result()
-		if err != nil {
-			if err == redis.Nil {
-				// Key does not exist, return 0
-				val = "0"
-			} else {
-				log.Fatal(err)
-			}
-		}
-		w.Write([]byte(val))
+		score := t.GetHighScore()
+		w.Write([]byte(strconv.Itoa(score)))
 	} else if r.Method == "POST" {
 		// Read the body
 		newScore, _ := io.ReadAll(r.Body)
-		// TODO: Get the current high score and see if it's higher
-		t.RedisClient.Set(ctx, "score", newScore, 0)
+		iNewScore, _ := strconv.Atoi(string(newScore))
+		iOldScore := t.GetHighScore()
+		if iNewScore > iOldScore {
+			t.RedisClient.Set(t.ctx, "score", iNewScore, 0)
+			w.Write(newScore)
+		} else {
+			w.Write([]byte(strconv.Itoa(iOldScore)))
+		}
 	}
+}
+
+func (t *TerraminoData) GetHighScore() int {
+	val, err := t.RedisClient.Get(t.ctx, "score").Result()
+	if err != nil {
+		if err == redis.Nil {
+			// Key does not exist, return 0
+			return 0
+		} else {
+			log.Fatal(err)
+		}
+	}
+
+	iVal, _ := strconv.Atoi(val)
+	return iVal
 }
 
 // Lookup requested file, return an error if it
