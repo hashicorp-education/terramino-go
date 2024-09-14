@@ -1,44 +1,266 @@
-html, body {
-    height: 100%;
-    margin: 0;
-}
-
+html,
 body {
-    background-image: url("background.png");
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-family: Arial, Helvetica, sans-serif
+  height: 100%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: black;
 }
 
-h1 {
-    font-family: Impact, Charcoal, sans-serif
+.game-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center align the header and game */
+  justify-content: center;
+  width: 100%;
 }
 
-canvas {
-    border: 1px solid white;
+.game-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.game-title {
+  font-family: "Courier New", monospace;
+  font-size: 36px;
+  color: white;
+  margin: 0;
+}
+
+.game-instructions {
+  font-family: "Courier New", monospace;
+  font-size: 14px;
+  color: #bfbfc0; /* Light grey to match the website's style */
+  margin: 5px 0 20px;
+  line-height: 1.5;
 }
 
 .container {
-    position: relative;
-    margin: 0 auto;
+  display: flex;
+  justify-content: center; /* Center the game and side panel */
 }
 
-.content {
-    position: relative;
-    left: 0;
-    top: 0;
+canvas {
+  background-color: #1d1e1f; /* Dark grey for the game grid (Gray 1) */
+  border: none;
+  border-radius: 2px;
 }
 
-.score-header {
-    display: inline-block;
-    font-weight: bold;
-    font-size: 200%;
-    width: 10em;
+.game-panel {
+  margin-right: 20px;
 }
 
-.score {
-    font-weight: bold;
-    font-size: 200%;
+.side-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* Left align side panel */
+}
+
+.score-board {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* Left align the score container */
+  margin-bottom: 20px;
+}
+
+.score-section {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end; /* Right align score */
+  padding: 7px 12px;
+  padding-left: 18px;
+  margin-bottom: 10px;
+  width: 140px; /* Ensure consistent width */
+  height: auto; /* Let height adjust based on content */
+  border-radius: 2px;
+  font-size: 18px;
+}
+
+.trophy-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 10px;
+  margin-left: 5px; /* Reduced left margin for better alignment */
+}
+
+.score-label {
+  font-size: 10px; /* Small white text for the SCORE label */
+  font-family: sans-serif;
+  color: white;
+  margin-right: 10px; /* Space between label and score */
+}
+
+.score-text {
+  font-size: 20px; /* Adjusted font size for better balance */
+  font-family: "Courier New", monospace;
+  text-align: right; /* Right-align the text inside the container */
+}
+
+.highscore-section {
+  background-color: rgba(255, 255, 0, 0.1); /* Slight yellow tint */
+}
+
+.current-score-section {
+  background-color: rgba(255, 255, 255, 0.1); /* Slight grey tint */
+}
+
+.yellow {
+  color: yellow;
+}
+
+.white {
+  color: white;
+}
+
+.next-blocks {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* Left-align the next blocks */
+}
+
+.next-blocks canvas {
+  background-color: #1d1e1f; /* Grey 1 for the next block background */
+  margin-bottom: 10px;
+  width: 64px;
+  height: 64px;
+}
+
+.footer {
+  position: fixed;
+  bottom: 10px;
+  text-align: center;
+  width: 100%;
+  font-family: "Courier New", monospace;
+  z-index: 1; /* Ensure the footer is above the chevron */
+}
+
+.footer a {
+  color: #bfbfc0; /* Light grey to match the site */
+  text-decoration: none;
+}
+
+.footer a:hover {
+  text-decoration: underline;
+}
+
+/* Modal Styling to match game */
+#debug-modal {
+  background-color: #1d1e1f; /* Match the dark grey from the game grid */
+  color: white;
+  font-family: "Courier New", monospace; /* Use the same font */
+  border-radius: 8px; /* Smooth edges */
+  padding: 20px;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+  max-width: 80%;
+  z-index: 1000; /* Make sure it's on top */
+}
+
+#debug-info {
+  background-color: #333333; /* Darker grey for background */
+  color: #bfbfc0; /* Light grey text */
+  padding: 10px;
+  border-radius: 5px;
+  font-size: 14px; /* Adjust size for readability */
+  overflow: auto; /* Scroll if content is too large */
+  white-space: pre-wrap;
+}
+
+/* Close Button Styling */
+#close-debug,
+#debug-button {
+  background-color: #02a8ef; /* Match button color with game theme */
+  color: white;
+  font-family: "Courier New", monospace;
+  font-size: 14px;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#close-debug:hover,
+#debug-button:hover {
+  background-color: #0289cf; /* Slightly darker on hover */
+}
+
+#debug-button {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  font-weight: bold;
+  z-index: 9999; /* Ensure it's always on top */
+}
+
+#close-debug {
+  margin-top: 10px;
+  display: block;
+  width: 100%;
+  text-align: center;
+  font-weight: bold;
+}
+
+.hashicorp-logos {
+  margin-top: 10px; /* Add some spacing from the instructions */
+  display: flex;
+  justify-content: center; /* Center the logos */
+}
+
+.hashicorp-logos img {
+  width: auto; /* Ensure the logos are a reasonable size */
+  height: 3em;
+}
+
+/* Background Pattern */
+body {
+  background-color: black;
+  position: relative;
+}
+
+/* Dot Pattern for Top-Left Chevron with Horizontal Gradient Fade */
+html::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 500px; /* Adjust width to control how far the pattern goes */
+  height: 100%;
+  background-image: url("dot-pattern.png");
+  background-size: 400px 400px; /* Repeat both horizontally and vertically */
+  background-repeat: repeat; /* Repeat in both x and y directions */
+  background-position: left;
+  mask-image: linear-gradient(
+    to right,
+    black 40%,
+    transparent 100%
+  ); /* Only fade horizontally towards the right */
+  opacity: 0.2; /* Subtle opacity */
+  z-index: -1;
+}
+
+/* Dot Pattern for Bottom-Right Chevron with Horizontal Gradient Fade */
+html::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 500px; /* Adjust width to control how far the pattern goes */
+  height: 100%;
+  background-image: url("dot-pattern.png");
+  background-size: 400px 400px; /* Repeat both horizontally and vertically */
+  background-repeat: repeat; /* Repeat in both x and y directions */
+  background-position: right;
+  mask-image: linear-gradient(
+    to left,
+    black 40%,
+    transparent 100%
+  ); /* Only fade horizontally towards the left */
+  opacity: 0.2;
+  z-index: -1;
 }
