@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"text/template"
 
 	terraminogo "github.com/brianmmcclain/terraminogo/internal"
@@ -30,9 +31,13 @@ func main() {
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/env", envHandler)
 	http.HandleFunc("/score", t.highScoreHandler)
+	http.HandleFunc("/redis", t.redisHandler)
 	http.HandleFunc("/{path}", pathHandler)
 
-	err := http.ListenAndServe(":8080", nil)
+	port := ":8080"
+	fmt.Printf("Terramino server is running on http://localhost%s\n", port)
+
+	err := http.ListenAndServe(port, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -132,12 +137,22 @@ func fileLookup(file string) (string, error) {
 	}
 }
 
-// DEBUG: Print all runtime environment variables
+// DEBUG: Print all runtime environment variables that start with "HCP_"
 func envHandler(w http.ResponseWriter, r *http.Request) {
 	out := ""
 	for _, e := range os.Environ() {
-		out += fmt.Sprintf("%s\n", e)
+		// Split the environment variable into key and value
+		pair := strings.SplitN(e, "=", 2)
+		if strings.HasPrefix(pair[0], "HCP_") {
+			out += fmt.Sprintf("%s\n", e)
+		}
 	}
 
 	w.Write([]byte(out))
+}
+
+func (t *TerraminoData) redisHandler(w http.ResponseWriter, r *http.Request) {
+	redisHost, _ := t.HVSClient.GetSecret("terramino", "redis_host")
+	redisPort, _ := t.HVSClient.GetSecret("terramino", "redis_port")
+	fmt.Fprintf(w, "redis_host=%s\nredis_port=%s\n", redisHost, redisPort)
 }

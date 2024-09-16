@@ -2,7 +2,10 @@ module github.com/brianmmcclain/terraminogo
 
 go 1.22.1
 
-require github.com/hashicorp/hcp-sdk-go v0.111.0
+require (
+	github.com/hashicorp/hcp-sdk-go v0.111.0
+	github.com/redis/go-redis/v9 v9.6.1
+)
 
 require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
@@ -28,7 +31,6 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
-	github.com/redis/go-redis/v9 v9.6.1 // indirect
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	go.mongodb.org/mongo-driver v1.13.1 // indirect
