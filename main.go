@@ -20,6 +20,7 @@ type TerraminoData struct {
 	HVSClient   *terraminogo.HVSClient
 	RedisClient *redis.Client
 	ctx         context.Context
+	appName     string
 }
 
 func main() {
@@ -27,6 +28,12 @@ func main() {
 	t.HVSClient = terraminogo.NewHVSClient()
 	t.RedisClient = nil
 	t.ctx = context.Background()
+
+	appName, envExists := os.LookupEnv("APP_NAME")
+	if !envExists {
+		appName = "terramino"
+	}
+	t.appName = appName
 
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/env", envHandler)
@@ -77,17 +84,18 @@ func pathHandler(w http.ResponseWriter, r *http.Request) {
 func (t *TerraminoData) highScoreHandler(w http.ResponseWriter, r *http.Request) {
 	if t.RedisClient == nil {
 		// We haven't connected to Redis yet, see if we have one available
-		redisHost, err := t.HVSClient.GetSecret("terramino", "redis_host")
+		redisIP, err := t.HVSClient.GetSecret(t.appName, "redis_ip")
 		if err != nil {
 			// No host defined, return an error
 			w.WriteHeader(500)
 			return
 		}
 		// Otherwise, we should have one available, get the rest of the connection info
-		redisPort, _ := t.HVSClient.GetSecret("terramino", "redis_port")
+		redisPort, _ := t.HVSClient.GetSecret(t.appName, "redis_port")
+		redisPassword, _ := t.HVSClient.GetSecret(t.appName, "redis_password")
 		t.RedisClient = redis.NewClient(&redis.Options{
-			Addr:     fmt.Sprintf("%s:%s", redisHost, redisPort),
-			Password: "",
+			Addr:     fmt.Sprintf("%s:%s", redisIP, redisPort),
+			Password: redisPassword,
 			DB:       0,
 		})
 	}
@@ -152,7 +160,7 @@ func envHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (t *TerraminoData) redisHandler(w http.ResponseWriter, r *http.Request) {
-	redisHost, _ := t.HVSClient.GetSecret("terramino", "redis_host")
-	redisPort, _ := t.HVSClient.GetSecret("terramino", "redis_port")
+	redisHost, _ := t.HVSClient.GetSecret(t.appName, "redis_ip")
+	redisPort, _ := t.HVSClient.GetSecret(t.appName, "redis_port")
 	fmt.Fprintf(w, "redis_host=%s\nredis_port=%s\n", redisHost, redisPort)
 }

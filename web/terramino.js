@@ -3,7 +3,9 @@ var highScore = 0; // Initialize high score
 
 const SCORE_NEWTETROMINO = 10;
 const SCORE_CLEARLINE = 100;
+
 updateScore();
+getHighScore();
 
 function updateScore() {
   const scoreSpan = document.getElementById("score");
@@ -24,11 +26,25 @@ function updateHighScoreUI() {
   }
 }
 
-// Get the high score (placeholder function)
+// Get the high score
 function getHighScore() {
-  // Assume we're getting the high score from a server or local storage
-  highScore = 500; // Example value, replace this with real logic
-  updateHighScoreUI();
+  scoreURL = window.location.href + "score";
+  getScoreRequest = new XMLHttpRequest();
+  getScoreRequest.onreadystatechange = function() {
+    if (getScoreRequest.readyState == 4 && getScoreRequest.status == 200) {
+      highScore = getScoreRequest.responseText;
+      updateHighScoreUI();
+    }
+  }
+  getScoreRequest.open("GET", scoreURL, true);
+  getScoreRequest.send();
+}
+
+function setHighScore() {
+  scoreURL = window.location.href + "score";
+  getScoreRequest = new XMLHttpRequest();
+  getScoreRequest.open("POST", scoreURL, true);
+  getScoreRequest.send(highScore);
 }
 
 // Set a new high score if the current score is higher
@@ -444,7 +460,6 @@ function hardDrop() {
 }
 
 // Start game
-getHighScore();
 rAF = requestAnimationFrame(loop);
 
 // Ensure the modal is hidden by default
