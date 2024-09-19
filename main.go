@@ -124,7 +124,9 @@ func (t *TerraminoData) GetHighScore() int {
 			// Key does not exist, return 0
 			return 0
 		} else {
-			log.Fatal(err)
+			// Error connecting to Redis, return error for now
+			// and show error in debug menu
+			return 0
 		}
 	}
 
@@ -162,5 +164,12 @@ func envHandler(w http.ResponseWriter, r *http.Request) {
 func (t *TerraminoData) redisHandler(w http.ResponseWriter, r *http.Request) {
 	redisHost, _ := t.HVSClient.GetSecret(t.appName, "redis_ip")
 	redisPort, _ := t.HVSClient.GetSecret(t.appName, "redis_port")
-	fmt.Fprintf(w, "redis_host=%s\nredis_port=%s\n", redisHost, redisPort)
+
+	redisPing := "No connection"
+	if t.RedisClient != nil {
+		pingResp := t.RedisClient.Ping(t.ctx)
+		redisPing = pingResp.String()
+	}
+
+	fmt.Fprintf(w, "redis_host=%s\nredis_port=%s\n\nConnection: %s", redisHost, redisPort, redisPing)
 }

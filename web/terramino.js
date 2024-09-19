@@ -1,5 +1,6 @@
 var score = 0;
 var highScore = 0; // Initialize high score
+var newHighScore = false;
 
 const SCORE_NEWTETROMINO = 10;
 const SCORE_CLEARLINE = 100;
@@ -27,30 +28,28 @@ function updateHighScoreUI() {
 }
 
 // Get the high score
-function getHighScore() {
-  scoreURL = window.location.href + "score";
-  getScoreRequest = new XMLHttpRequest();
-  getScoreRequest.onreadystatechange = function() {
-    if (getScoreRequest.readyState == 4 && getScoreRequest.status == 200) {
-      highScore = getScoreRequest.responseText;
-      updateHighScoreUI();
-    }
-  }
-  getScoreRequest.open("GET", scoreURL, true);
-  getScoreRequest.send();
+async function getHighScore() {
+  const getScoreData = await fetch("/score").then((res) => res.text());
+  highScore = getScoreData;
+  updateHighScoreUI();
 }
 
-function setHighScore() {
-  scoreURL = window.location.href + "score";
-  getScoreRequest = new XMLHttpRequest();
-  getScoreRequest.open("POST", scoreURL, true);
-  getScoreRequest.send(highScore);
+// Set the high score
+async function setHighScore() {
+  if (newHighScore) {
+    const setScoreData = await fetch("/score", {
+      method: "POST",
+      body: highScore
+    }).then((res) => res.text());
+    console.log(setScoreData);
+  }
 }
 
 // Set a new high score if the current score is higher
 function checkHighScore() {
   if (score > highScore) {
     highScore = score;
+    newHighScore = true;
     updateHighScoreUI();
   }
 }
