@@ -18,7 +18,7 @@ import (
 
 type TerraminoData struct {
 	HVSClient   *terraminogo.HVSClient
-	RedisClient *redis.Client
+	redisClient *redis.Client
 	ctx         context.Context
 	appName     string
 }
@@ -26,7 +26,7 @@ type TerraminoData struct {
 func main() {
 	t := &TerraminoData{}
 	t.HVSClient = terraminogo.NewHVSClient()
-	t.RedisClient = nil
+	t.redisClient = nil
 	t.ctx = context.Background()
 
 	appName, envExists := os.LookupEnv("APP_NAME")
@@ -82,34 +82,15 @@ func pathHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (t *TerraminoData) highScoreHandler(w http.ResponseWriter, r *http.Request) {
-	if t.RedisClient == nil {
-		// We haven't connected to Redis yet, see if we have one available
-		redisIP, err := t.HVSClient.GetSecret(t.appName, "redis_ip")
-		if err != nil {
-			// No host defined, return an error
-			w.WriteHeader(500)
-			return
-		}
-		// Otherwise, we should have one available, get the rest of the connection info
-		redisPort, _ := t.HVSClient.GetSecret(t.appName, "redis_port")
-		redisPassword, _ := t.HVSClient.GetSecret(t.appName, "redis_password")
-		t.RedisClient = redis.NewClient(&redis.Options{
-			Addr:     fmt.Sprintf("%s:%s", redisIP, redisPort),
-			Password: redisPassword,
-			DB:       0,
-		})
-	}
-
 	if r.Method == "GET" {
 		score := t.GetHighScore()
 		w.Write([]byte(strconv.Itoa(score)))
 	} else if r.Method == "POST" {
-		// Read the body
 		newScore, _ := io.ReadAll(r.Body)
 		iNewScore, _ := strconv.Atoi(string(newScore))
 		iOldScore := t.GetHighScore()
 		if iNewScore > iOldScore {
-			t.RedisClient.Set(t.ctx, "score", iNewScore, 0)
+			t.SetHighScore(iNewScore)
 			w.Write(newScore)
 		} else {
 			w.Write([]byte(strconv.Itoa(iOldScore)))
@@ -117,21 +98,63 @@ func (t *TerraminoData) highScoreHandler(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-func (t *TerraminoData) GetHighScore() int {
-	val, err := t.RedisClient.Get(t.ctx, "score").Result()
-	if err != nil {
-		if err == redis.Nil {
-			// Key does not exist, return 0
-			return 0
-		} else {
-			// Error connecting to Redis, return error for now
-			// and show error in debug menu
-			return 0
+func (t *TerraminoData) getRedisClient() *redis.Client {
+	if t.redisClient != nil {
+		// We have an existing connection, make sure it's still valid
+		pingResp := t.redisClient.Ping(t.ctx)
+		if pingResp.Err() == nil {
+			// Connection is valid, return client
+			return t.redisClient
 		}
 	}
 
-	iVal, _ := strconv.Atoi(val)
-	return iVal
+	// Either we don't have a connection, or it's no longer valid
+	// Create a new client
+
+	// Check for connection info in HVS
+	redisIP, err := t.HVSClient.GetSecret(t.appName, "redis_ip")
+	if err != nil {
+		// No Redis server is available
+		t.redisClient = nil
+		return nil
+	}
+	redisPort, _ := t.HVSClient.GetSecret(t.appName, "redis_port")
+	redisPassword, _ := t.HVSClient.GetSecret(t.appName, "redis_password")
+	t.redisClient = redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%s", redisIP, redisPort),
+		Password: redisPassword,
+		DB:       0,
+	})
+
+	// Check connection
+	pingResp := t.redisClient.Ping(t.ctx)
+	if pingResp.Err() != nil {
+		// Error connecting to the server
+		log.Println(pingResp.Err())
+		return nil
+	}
+
+	return t.redisClient
+}
+
+func (t *TerraminoData) GetHighScore() int {
+	redisClient := t.getRedisClient()
+	if redisClient != nil {
+		val, err := redisClient.Get(t.ctx, "score").Result()
+		if err == nil {
+			iVal, _ := strconv.Atoi(val)
+			return iVal
+		}
+	}
+
+	return 0
+}
+
+func (t *TerraminoData) SetHighScore(score int) {
+	redisClient := t.getRedisClient()
+	if redisClient != nil {
+		redisClient.Set(t.ctx, "score", score, 0)
+	}
 }
 
 // Lookup requested file, return an error if it
@@ -166,8 +189,9 @@ func (t *TerraminoData) redisHandler(w http.ResponseWriter, r *http.Request) {
 	redisPort, _ := t.HVSClient.GetSecret(t.appName, "redis_port")
 
 	redisPing := "No connection"
-	if t.RedisClient != nil {
-		pingResp := t.RedisClient.Ping(t.ctx)
+	redisClient := t.getRedisClient()
+	if redisClient != nil {
+		pingResp := redisClient.Ping(t.ctx)
 		redisPing = pingResp.String()
 	}
 

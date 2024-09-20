@@ -41,7 +41,6 @@ async function setHighScore() {
       method: "POST",
       body: highScore
     }).then((res) => res.text());
-    console.log(setScoreData);
   }
 }
 
