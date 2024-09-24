@@ -41,7 +41,11 @@ func main() {
 	http.HandleFunc("/redis", t.redisHandler)
 	http.HandleFunc("/{path}", pathHandler)
 
-	port := ":8080"
+	envPort, envPortExists := os.LookupEnv("TERRAMINO_PORT")
+	if !envPortExists {
+		envPort = "8080"
+	}
+	port := fmt.Sprintf(":%s", envPort)
 	fmt.Printf("Terramino server is running on http://localhost%s\n", port)
 
 	err := http.ListenAndServe(port, nil)
