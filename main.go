@@ -99,6 +99,11 @@ func (t *TerraminoData) highScoreHandler(w http.ResponseWriter, r *http.Request)
 		} else {
 			w.Write([]byte(strconv.Itoa(iOldScore)))
 		}
+	} else if r.Method == "PUT" {
+		newScore, _ := io.ReadAll(r.Body)
+		iNewScore, _ := strconv.Atoi(string(newScore))
+		t.SetHighScore(iNewScore)
+		w.Write(newScore)
 	}
 }
 
