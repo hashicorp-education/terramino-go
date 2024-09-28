@@ -190,6 +190,8 @@ func envHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	out += fmt.Sprintf("APP_NAME=%s\n", os.Getenv("APP_NAME"))
+
 	w.Write([]byte(out))
 }
 
