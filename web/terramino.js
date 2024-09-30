@@ -451,6 +451,12 @@ rAF = requestAnimationFrame(loop);
 window.onload = function () {
   const debugModal = document.getElementById("debug-modal");
   debugModal.style.display = "none"; // Ensure it's hidden on page load
+
+  const modeToggle = document.getElementById("mode-toggle");
+  modeToggle.addEventListener("click", () => {
+    document.body.classList.toggle("light-mode");
+    updateColors();
+  });
 };
 
 // Event listener for the Debug button

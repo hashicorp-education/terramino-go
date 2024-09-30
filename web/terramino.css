@@ -1,4 +1,17 @@
-html,
+:root {
+  --bg-color: black;
+  --text-color: white;
+  --grid-color: #1d1e1f;
+  --next-block-bg: #333333;
+  --highscore-bg: rgba(255, 255, 0, 0.1);
+  --score-bg: rgba(255, 255, 255, 0.1);
+  --button-bg: #02a8ef;
+  --button-hover: #0289cf;
+  --modal-bg: #1d1e1f;
+  --debug-info-bg: #333333;
+  --footer-color: #bfbfc0;
+}
+
 body {
   height: 100%;
   margin: 0;
@@ -6,13 +19,17 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background-color: black;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  transition: background-color 0.3s, color 0.3s;
+  position: relative;
+  font-family: "Courier New", monospace;
 }
 
 .game-wrapper {
   display: flex;
   flex-direction: column;
-  align-items: center; /* Center align the header and game */
+  align-items: center;
   justify-content: center;
   width: 100%;
 }
@@ -23,29 +40,28 @@ body {
 }
 
 .game-title {
-  font-family: "Courier New", monospace;
   font-size: 36px;
-  color: white;
   margin: 0;
 }
 
 .game-instructions {
-  font-family: "Courier New", monospace;
   font-size: 14px;
-  color: #bfbfc0; /* Light grey to match the website's style */
+  color: var(--footer-color);
   margin: 5px 0 20px;
   line-height: 1.5;
 }
 
 .container {
   display: flex;
-  justify-content: center; /* Center the game and side panel */
+  justify-content: center;
 }
 
-canvas {
-  background-color: #1d1e1f; /* Dark grey for the game grid (Gray 1) */
+canvas,
+.next-blocks canvas {
+  background-color: var(--grid-color);
   border: none;
   border-radius: 2px;
+  transition: background-color 0.3s;
 }
 
 .game-panel {
@@ -55,25 +71,23 @@ canvas {
 .side-panel {
   display: flex;
   flex-direction: column;
-  align-items: flex-start; /* Left align side panel */
+  align-items: flex-start;
 }
 
 .score-board {
   display: flex;
   flex-direction: column;
-  align-items: flex-start; /* Left align the score container */
+  align-items: flex-start;
   margin-bottom: 20px;
 }
 
 .score-section {
   display: flex;
   align-items: center;
-  justify-content: flex-end; /* Right align score */
-  padding: 7px 12px;
-  padding-left: 18px;
+  justify-content: flex-end;
+  padding: 7px 12px 7px 18px;
   margin-bottom: 10px;
-  width: 140px; /* Ensure consistent width */
-  height: auto; /* Let height adjust based on content */
+  width: 140px;
   border-radius: 2px;
   font-size: 18px;
 }
@@ -81,47 +95,42 @@ canvas {
 .trophy-icon {
   width: 18px;
   height: 18px;
-  margin-right: 10px;
-  margin-left: 5px; /* Reduced left margin for better alignment */
+  margin: 0 10px 0 5px;
 }
 
 .score-label {
-  font-size: 10px; /* Small white text for the SCORE label */
+  font-size: 10px;
   font-family: sans-serif;
-  color: white;
-  margin-right: 10px; /* Space between label and score */
+  margin-right: 10px;
 }
 
 .score-text {
-  font-size: 20px; /* Adjusted font size for better balance */
-  font-family: "Courier New", monospace;
-  text-align: right; /* Right-align the text inside the container */
+  font-size: 20px;
+  text-align: right;
 }
 
 .highscore-section {
-  background-color: rgba(255, 255, 0, 0.1); /* Slight yellow tint */
+  background-color: var(--highscore-bg);
 }
-
 .current-score-section {
-  background-color: rgba(255, 255, 255, 0.1); /* Slight grey tint */
+  background-color: var(--score-bg);
 }
 
 .yellow {
   color: yellow;
 }
-
 .white {
-  color: white;
+  color: var(--text-color);
 }
 
 .next-blocks {
   display: flex;
   flex-direction: column;
-  align-items: flex-start; /* Left-align the next blocks */
+  align-items: flex-start;
 }
 
 .next-blocks canvas {
-  background-color: #1d1e1f; /* Grey 1 for the next block background */
+  background-color: var(--next-block-bg);
   margin-bottom: 10px;
   width: 64px;
   height: 64px;
@@ -132,25 +141,23 @@ canvas {
   bottom: 10px;
   text-align: center;
   width: 100%;
-  font-family: "Courier New", monospace;
-  z-index: 1; /* Ensure the footer is above the chevron */
+  z-index: 1;
 }
 
 .footer a {
-  color: #bfbfc0; /* Light grey to match the site */
+  color: var(--footer-color);
   text-decoration: none;
+  transition: color 0.3s;
 }
 
 .footer a:hover {
   text-decoration: underline;
 }
 
-/* Modal Styling to match game */
 #debug-modal {
-  background-color: #1d1e1f; /* Match the dark grey from the game grid */
-  color: white;
-  font-family: "Courier New", monospace; /* Use the same font */
-  border-radius: 8px; /* Smooth edges */
+  background-color: var(--modal-bg);
+  color: var(--text-color);
+  border-radius: 8px;
   padding: 20px;
   box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
   position: fixed;
@@ -159,43 +166,53 @@ canvas {
   transform: translate(-50%, -50%);
   width: 400px;
   max-width: 80%;
-  z-index: 1000; /* Make sure it's on top */
+  z-index: 1000;
 }
 
 #debug-info {
-  background-color: #333333; /* Darker grey for background */
-  color: #bfbfc0; /* Light grey text */
+  background-color: var(--debug-info-bg);
+  color: var(--footer-color);
   padding: 10px;
   border-radius: 5px;
-  font-size: 14px; /* Adjust size for readability */
-  overflow: auto; /* Scroll if content is too large */
+  font-size: 14px;
+  overflow: auto;
   white-space: pre-wrap;
 }
 
-/* Close Button Styling */
 #close-debug,
-#debug-button {
-  background-color: #02a8ef; /* Match button color with game theme */
-  color: white;
-  font-family: "Courier New", monospace;
+#debug-button,
+#mode-toggle {
+  background-color: var(--button-bg);
+  color: var(--text-color);
   font-size: 14px;
   border: none;
   padding: 8px 12px;
-  border-radius: 4px;
+  border-radius: 20px;
   cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 #close-debug:hover,
-#debug-button:hover {
-  background-color: #0289cf; /* Slightly darker on hover */
+#debug-button:hover,
+#mode-toggle:hover {
+  background-color: var(--button-hover);
+}
+
+#debug-button,
+#mode-toggle {
+  position: fixed;
+  top: 10px;
+  z-index: 9999;
 }
 
 #debug-button {
-  position: fixed;
-  top: 10px;
   right: 10px;
-  font-weight: bold;
-  z-index: 9999; /* Ensure it's always on top */
+}
+#mode-toggle {
+  right: 100px;
 }
 
 #close-debug {
@@ -206,61 +223,88 @@ canvas {
   font-weight: bold;
 }
 
+#debug-button::before {
+  content: "🐞";
+  margin-right: 5px;
+}
+
+.mode-toggle .sun,
+.mode-toggle .moon {
+  width: 18px;
+  height: 18px;
+}
+
+.mode-toggle .sun {
+  display: none;
+}
+.mode-toggle .moon {
+  display: inline;
+}
+
 .hashicorp-logos {
-  margin-top: 10px; /* Add some spacing from the instructions */
+  margin-top: 10px;
   display: flex;
-  justify-content: center; /* Center the logos */
+  justify-content: center;
 }
 
 .hashicorp-logos img {
-  width: auto; /* Ensure the logos are a reasonable size */
+  width: auto;
   height: 3em;
 }
 
 /* Background Pattern */
-body {
-  background-color: black;
-  position: relative;
-}
-
-/* Dot Pattern for Top-Left Chevron with Horizontal Gradient Fade */
-html::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 500px; /* Adjust width to control how far the pattern goes */
-  height: 100%;
-  background-image: url("dot-pattern.png");
-  background-size: 400px 400px; /* Repeat both horizontally and vertically */
-  background-repeat: repeat; /* Repeat in both x and y directions */
-  background-position: left;
-  mask-image: linear-gradient(
-    to right,
-    black 40%,
-    transparent 100%
-  ); /* Only fade horizontally towards the right */
-  opacity: 0.2; /* Subtle opacity */
-  z-index: -1;
-}
-
-/* Dot Pattern for Bottom-Right Chevron with Horizontal Gradient Fade */
+html::before,
 html::after {
   content: "";
   position: absolute;
   top: 0;
-  right: 0;
-  width: 500px; /* Adjust width to control how far the pattern goes */
+  width: 500px;
   height: 100%;
   background-image: url("dot-pattern.png");
-  background-size: 400px 400px; /* Repeat both horizontally and vertically */
-  background-repeat: repeat; /* Repeat in both x and y directions */
-  background-position: right;
-  mask-image: linear-gradient(
-    to left,
-    black 40%,
-    transparent 100%
-  ); /* Only fade horizontally towards the left */
+  background-size: 400px 400px;
+  background-repeat: repeat;
   opacity: 0.2;
   z-index: -1;
+}
+
+html::before {
+  left: 0;
+  background-position: left;
+  mask-image: linear-gradient(to right, black 40%, transparent 100%);
+}
+
+html::after {
+  right: 0;
+  background-position: right;
+  mask-image: linear-gradient(to left, black 40%, transparent 100%);
+}
+
+/* Light mode styles */
+body.light-mode {
+  --bg-color: white;
+  --text-color: black;
+  --grid-color: #e0e0e0;
+  --next-block-bg: #f0f0f0;
+  --highscore-bg: rgba(255, 255, 0, 0.2);
+  --score-bg: rgba(0, 0, 0, 0.1);
+  --button-bg: rgba(0, 0, 0, 0.1);
+  --button-hover: rgba(0, 0, 0, 0.2);
+}
+
+body.light-mode .footer a {
+  color: #666;
+}
+body.light-mode .trophy-icon {
+  filter: brightness(0) invert(0);
+}
+body.light-mode .mode-toggle .sun {
+  display: inline;
+}
+body.light-mode .mode-toggle .moon {
+  display: none;
+}
+body.light-mode::before,
+body.light-mode::after {
+  opacity: 0.1;
+  background-image: url("light-dot-pattern.png");
 }
