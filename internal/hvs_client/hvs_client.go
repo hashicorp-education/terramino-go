@@ -1,4 +1,4 @@
-package terraminogo
+package hvs_client
 
 import (
 	"log"

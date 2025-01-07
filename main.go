@@ -4,62 +4,58 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"text/template"
 
-	terraminogo "github.com/hashicorp-education/terraminogo/internal"
-	"github.com/redis/go-redis/v9"
+	"github.com/hashicorp-education/terraminogo/internal/highscore"
+	"github.com/hashicorp-education/terraminogo/internal/hvs_client"
 )
 
-type TerraminoData struct {
-	HVSClient      *terraminogo.HVSClient
-	redisClient    *redis.Client
-	ctx            context.Context
-	appName        string
-	useDirectRedis bool
-	redisHost      string
-	redisPort      string
-	redisPassword  string
+type TerraminoServer struct {
+	highScoreManager *highscore.Manager
 }
 
 func main() {
-	t := &TerraminoData{}
-	t.ctx = context.Background()
+	ctx := context.Background()
 
-	// Check if direct Redis connection is configured
-	redisHost, hasRedisHost := os.LookupEnv("REDIS_HOST")
-	redisPort, hasRedisPort := os.LookupEnv("REDIS_PORT")
-
-	if hasRedisHost && hasRedisPort {
-		t.useDirectRedis = true
-		t.redisHost = redisHost
-		t.redisPort = redisPort
-		t.redisPassword = os.Getenv("REDIS_PASSWORD")
-		t.HVSClient = nil
-	} else {
-		t.useDirectRedis = false
-		t.HVSClient = terraminogo.NewHVSClient()
-	}
-
-	t.redisClient = nil
-
+	// Get application name
 	appName, envExists := os.LookupEnv("APP_NAME")
 	if !envExists {
 		appName = "terramino"
 	}
-	t.appName = appName
 
+	// Initialize high score manager
+	server := &TerraminoServer{
+		highScoreManager: highscore.NewManager(ctx, appName),
+	}
+
+	// Configure Redis connection
+	redisHost, hasRedisHost := os.LookupEnv("REDIS_HOST")
+	redisPort, hasRedisPort := os.LookupEnv("REDIS_PORT")
+
+	if hasRedisHost && hasRedisPort {
+		// Use direct Redis connection
+		server.highScoreManager.ConfigureRedis(
+			redisHost,
+			redisPort,
+			os.Getenv("REDIS_PASSWORD"),
+		)
+	} else {
+		// Use HVS for Redis configuration
+		server.highScoreManager.ConfigureHVS(hvs_client.NewHVSClient())
+	}
+
+	// Set up HTTP routes
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/env", envHandler)
-	http.HandleFunc("/score", t.highScoreHandler)
-	http.HandleFunc("/redis", t.redisHandler)
+	http.HandleFunc("/score", server.highScoreManager.HandleHTTP)
+	http.HandleFunc("/redis", server.redisHandler)
 	http.HandleFunc("/{path}", pathHandler)
 
+	// Start server
 	envPort, envPortExists := os.LookupEnv("TERRAMINO_PORT")
 	if !envPortExists {
 		envPort = "8080"
@@ -104,96 +100,6 @@ func pathHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, filePath)
 }
 
-func (t *TerraminoData) highScoreHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" {
-		score := t.GetHighScore()
-		w.Write([]byte(strconv.Itoa(score)))
-	} else if r.Method == "POST" {
-		newScore, _ := io.ReadAll(r.Body)
-		iNewScore, _ := strconv.Atoi(string(newScore))
-		iOldScore := t.GetHighScore()
-		if iNewScore > iOldScore {
-			t.SetHighScore(iNewScore)
-			w.Write(newScore)
-		} else {
-			w.Write([]byte(strconv.Itoa(iOldScore)))
-		}
-	} else if r.Method == "PUT" {
-		newScore, _ := io.ReadAll(r.Body)
-		iNewScore, _ := strconv.Atoi(string(newScore))
-		t.SetHighScore(iNewScore)
-		w.Write(newScore)
-	}
-}
-
-func (t *TerraminoData) getRedisClient() *redis.Client {
-	if t.redisClient != nil {
-		// We have an existing connection, make sure it's still valid
-		pingResp := t.redisClient.Ping(t.ctx)
-		if pingResp.Err() == nil {
-			// Connection is valid, return client
-			return t.redisClient
-		}
-	}
-
-	// Either we don't have a connection, or it's no longer valid
-	// Create a new client
-	var redisIP, redisPort, redisPassword string
-	var err error
-
-	if t.useDirectRedis {
-		redisIP = t.redisHost
-		redisPort = t.redisPort
-		redisPassword = t.redisPassword
-	} else {
-		// Check for connection info in HVS
-		redisIP, err = t.HVSClient.GetSecret(t.appName, "redis_ip")
-		if err != nil {
-			// No Redis server is available
-			t.redisClient = nil
-			return nil
-		}
-		redisPort, _ = t.HVSClient.GetSecret(t.appName, "redis_port")
-		redisPassword, _ = t.HVSClient.GetSecret(t.appName, "redis_password")
-	}
-
-	t.redisClient = redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", redisIP, redisPort),
-		Password: redisPassword,
-		DB:       0,
-	})
-
-	// Check connection
-	pingResp := t.redisClient.Ping(t.ctx)
-	if pingResp.Err() != nil {
-		// Error connecting to the server
-		log.Println(pingResp.Err())
-		return nil
-	}
-
-	return t.redisClient
-}
-
-func (t *TerraminoData) GetHighScore() int {
-	redisClient := t.getRedisClient()
-	if redisClient != nil {
-		val, err := redisClient.Get(t.ctx, "score").Result()
-		if err == nil {
-			iVal, _ := strconv.Atoi(val)
-			return iVal
-		}
-	}
-
-	return 0
-}
-
-func (t *TerraminoData) SetHighScore(score int) {
-	redisClient := t.getRedisClient()
-	if redisClient != nil {
-		redisClient.Set(t.ctx, "score", score, 0)
-	}
-}
-
 // Lookup requested file, return an error if it
 // does not exist
 func fileLookup(file string) (string, error) {
@@ -223,16 +129,7 @@ func envHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(out))
 }
 
-func (t *TerraminoData) redisHandler(w http.ResponseWriter, r *http.Request) {
-	redisHost, _ := t.HVSClient.GetSecret(t.appName, "redis_ip")
-	redisPort, _ := t.HVSClient.GetSecret(t.appName, "redis_port")
-
-	redisPing := "No connection"
-	redisClient := t.getRedisClient()
-	if redisClient != nil {
-		pingResp := redisClient.Ping(t.ctx)
-		redisPing = pingResp.String()
-	}
-
-	fmt.Fprintf(w, "redis_host=%s\nredis_port=%s\n\nConnection: %s", redisHost, redisPort, redisPing)
+func (s *TerraminoServer) redisHandler(w http.ResponseWriter, r *http.Request) {
+	host, port, status := s.highScoreManager.GetRedisInfo()
+	fmt.Fprintf(w, "redis_host=%s\nredis_port=%s\n\nConnection: %s", host, port, status)
 }
