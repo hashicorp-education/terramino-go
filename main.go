@@ -17,17 +17,36 @@ import (
 )
 
 type TerraminoData struct {
-	HVSClient   *terraminogo.HVSClient
-	redisClient *redis.Client
-	ctx         context.Context
-	appName     string
+	HVSClient      *terraminogo.HVSClient
+	redisClient    *redis.Client
+	ctx            context.Context
+	appName        string
+	useDirectRedis bool
+	redisHost      string
+	redisPort      string
+	redisPassword  string
 }
 
 func main() {
 	t := &TerraminoData{}
-	t.HVSClient = terraminogo.NewHVSClient()
-	t.redisClient = nil
 	t.ctx = context.Background()
+
+	// Check if direct Redis connection is configured
+	redisHost, hasRedisHost := os.LookupEnv("REDIS_HOST")
+	redisPort, hasRedisPort := os.LookupEnv("REDIS_PORT")
+
+	if hasRedisHost && hasRedisPort {
+		t.useDirectRedis = true
+		t.redisHost = redisHost
+		t.redisPort = redisPort
+		t.redisPassword = os.Getenv("REDIS_PASSWORD")
+		t.HVSClient = nil
+	} else {
+		t.useDirectRedis = false
+		t.HVSClient = terraminogo.NewHVSClient()
+	}
+
+	t.redisClient = nil
 
 	appName, envExists := os.LookupEnv("APP_NAME")
 	if !envExists {
@@ -119,16 +138,25 @@ func (t *TerraminoData) getRedisClient() *redis.Client {
 
 	// Either we don't have a connection, or it's no longer valid
 	// Create a new client
+	var redisIP, redisPort, redisPassword string
+	var err error
 
-	// Check for connection info in HVS
-	redisIP, err := t.HVSClient.GetSecret(t.appName, "redis_ip")
-	if err != nil {
-		// No Redis server is available
-		t.redisClient = nil
-		return nil
+	if t.useDirectRedis {
+		redisIP = t.redisHost
+		redisPort = t.redisPort
+		redisPassword = t.redisPassword
+	} else {
+		// Check for connection info in HVS
+		redisIP, err = t.HVSClient.GetSecret(t.appName, "redis_ip")
+		if err != nil {
+			// No Redis server is available
+			t.redisClient = nil
+			return nil
+		}
+		redisPort, _ = t.HVSClient.GetSecret(t.appName, "redis_port")
+		redisPassword, _ = t.HVSClient.GetSecret(t.appName, "redis_password")
 	}
-	redisPort, _ := t.HVSClient.GetSecret(t.appName, "redis_port")
-	redisPassword, _ := t.HVSClient.GetSecret(t.appName, "redis_password")
+
 	t.redisClient = redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", redisIP, redisPort),
 		Password: redisPassword,
