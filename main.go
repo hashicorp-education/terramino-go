@@ -50,6 +50,9 @@ func main() {
 	http.HandleFunc("/env", envHandler)
 	http.HandleFunc("/redis", server.redisHandler)
 	http.HandleFunc("/score", server.highScoreManager.HandleHTTP)
+	http.HandleFunc("/info", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("Terramino - HashiCorp Demo App\nhttps://developer.hashicorp.com/"))
+	})
 
 	// Start server
 	envPort, envPortExists := os.LookupEnv("TERRAMINO_PORT")
