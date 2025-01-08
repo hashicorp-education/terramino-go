@@ -2,13 +2,11 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"strings"
-	"text/template"
 
 	"github.com/hashicorp-education/terraminogo/internal/highscore"
 	"github.com/hashicorp-education/terraminogo/internal/hvs_client"
@@ -49,11 +47,9 @@ func main() {
 	}
 
 	// Set up HTTP routes
-	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/env", envHandler)
-	http.HandleFunc("/score", server.highScoreManager.HandleHTTP)
 	http.HandleFunc("/redis", server.redisHandler)
-	http.HandleFunc("/{path}", pathHandler)
+	http.HandleFunc("/score", server.highScoreManager.HandleHTTP)
 
 	// Start server
 	envPort, envPortExists := os.LookupEnv("TERRAMINO_PORT")
@@ -66,50 +62,6 @@ func main() {
 	err := http.ListenAndServe(port, nil)
 	if err != nil {
 		log.Fatal(err)
-	}
-}
-
-// Parse and serve index template
-func indexHandler(w http.ResponseWriter, r *http.Request) {
-	t, err := template.ParseFiles("web/index.html")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = t.ExecuteTemplate(w, "index.html", nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-// Handle non-template files
-func pathHandler(w http.ResponseWriter, r *http.Request) {
-	filePath, err := fileLookup(r.PathValue("path"))
-	if err != nil {
-		// User requested a file that does not exist
-		// Return 404
-		if errors.Is(err, os.ErrNotExist) {
-			w.WriteHeader(404)
-			return
-		} else {
-			// Unknown error
-			log.Fatal(err)
-		}
-	}
-
-	http.ServeFile(w, r, filePath)
-}
-
-// Lookup requested file, return an error if it
-// does not exist
-func fileLookup(file string) (string, error) {
-	fullPath := fmt.Sprintf("web/%s", file)
-	_, err := os.Stat(fullPath)
-
-	if err != nil {
-		return "", err
-	} else {
-		return fullPath, nil
 	}
 }
 
