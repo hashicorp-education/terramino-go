@@ -9,7 +9,7 @@ A HashiCorp-themed Tetris-like game with web and CLI interfaces, built in Go.
 docker compose up
 
 # Play in browser
-open http://localhost:8080
+open http://localhost:8081
 
 # Play in terminal
 docker compose exec -it backend ./terramino-cli
