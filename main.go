@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
@@ -17,21 +18,21 @@ import (
 )
 
 type TerraminoData struct {
-	HVSClient   *terraminogo.HVSClient
 	redisClient *redis.Client
 	ctx         context.Context
 	appName     string
 }
 
 func main() {
+	// slog.SetLogLoggerLevel(slog.LevelDebug) // Uncomment to enable debug logging
+
 	t := &TerraminoData{}
-	t.HVSClient = terraminogo.NewHVSClient()
 	t.redisClient = nil
 	t.ctx = context.Background()
 
 	appName, envExists := os.LookupEnv("APP_NAME")
 	if !envExists {
-		appName = "terramino"
+		appName = "terramino-go"
 	}
 	t.appName = appName
 
@@ -56,6 +57,7 @@ func main() {
 
 // Parse and serve index template
 func indexHandler(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("REQ: /")
 	t, err := template.ParseFiles("web/index.html")
 	if err != nil {
 		log.Fatal(err)
@@ -69,6 +71,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
 // Handle non-template files
 func pathHandler(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("REQ: File", "path", r.PathValue("path"))
 	filePath, err := fileLookup(r.PathValue("path"))
 	if err != nil {
 		// User requested a file that does not exist
@@ -87,9 +90,11 @@ func pathHandler(w http.ResponseWriter, r *http.Request) {
 
 func (t *TerraminoData) highScoreHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
+		slog.Debug("REQ: GET /highscore")
 		score := t.GetHighScore()
 		w.Write([]byte(strconv.Itoa(score)))
 	} else if r.Method == "POST" {
+		slog.Debug("REQ: POST /highscore")
 		newScore, _ := io.ReadAll(r.Body)
 		iNewScore, _ := strconv.Atoi(string(newScore))
 		iOldScore := t.GetHighScore()
@@ -100,6 +105,7 @@ func (t *TerraminoData) highScoreHandler(w http.ResponseWriter, r *http.Request)
 			w.Write([]byte(strconv.Itoa(iOldScore)))
 		}
 	} else if r.Method == "PUT" {
+		slog.Debug("REQ: PUT /highscore")
 		newScore, _ := io.ReadAll(r.Body)
 		iNewScore, _ := strconv.Atoi(string(newScore))
 		t.SetHighScore(iNewScore)
@@ -114,6 +120,8 @@ func (t *TerraminoData) getRedisClient() *redis.Client {
 		if pingResp.Err() == nil {
 			// Connection is valid, return client
 			return t.redisClient
+		} else {
+			slog.Error("Could not ping Redis, connection lost?")
 		}
 	}
 
@@ -121,14 +129,18 @@ func (t *TerraminoData) getRedisClient() *redis.Client {
 	// Create a new client
 
 	// Check for connection info in HVS
-	redisIP, err := t.HVSClient.GetSecret(t.appName, "redis_ip")
+	slog.Debug("Getting Redis credentials from SSM", "secret name", t.appName+"-redis")
+	creds, err := terraminogo.GetSecret(t.appName + "-redis")
 	if err != nil {
 		// No Redis server is available
 		t.redisClient = nil
+		slog.Error("Could not get Redis credentials from SSM", "error", err)
 		return nil
 	}
-	redisPort, _ := t.HVSClient.GetSecret(t.appName, "redis_port")
-	redisPassword, _ := t.HVSClient.GetSecret(t.appName, "redis_password")
+	slog.Debug("Got Redis credentials", "ip", creds.IP)
+	redisIP := creds.IP
+	redisPort := creds.Port
+	redisPassword := creds.Password
 	t.redisClient = redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", redisIP, redisPort),
 		Password: redisPassword,
@@ -139,7 +151,7 @@ func (t *TerraminoData) getRedisClient() *redis.Client {
 	pingResp := t.redisClient.Ping(t.ctx)
 	if pingResp.Err() != nil {
 		// Error connecting to the server
-		log.Println(pingResp.Err())
+		slog.Error("Could not ping Redis after getting credentials", "error", pingResp.Err())
 		return nil
 	}
 
@@ -147,6 +159,7 @@ func (t *TerraminoData) getRedisClient() *redis.Client {
 }
 
 func (t *TerraminoData) GetHighScore() int {
+
 	redisClient := t.getRedisClient()
 	if redisClient != nil {
 		val, err := redisClient.Get(t.ctx, "score").Result()
@@ -160,6 +173,7 @@ func (t *TerraminoData) GetHighScore() int {
 }
 
 func (t *TerraminoData) SetHighScore(score int) {
+	slog.Debug("Set high score", "score", score)
 	redisClient := t.getRedisClient()
 	if redisClient != nil {
 		redisClient.Set(t.ctx, "score", score, 0)
@@ -181,6 +195,7 @@ func fileLookup(file string) (string, error) {
 
 // DEBUG: Print all runtime environment variables that start with "HCP_"
 func envHandler(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("GET /env")
 	out := ""
 	for _, e := range os.Environ() {
 		// Split the environment variable into key and value
@@ -196,8 +211,15 @@ func envHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (t *TerraminoData) redisHandler(w http.ResponseWriter, r *http.Request) {
-	redisHost, _ := t.HVSClient.GetSecret(t.appName, "redis_ip")
-	redisPort, _ := t.HVSClient.GetSecret(t.appName, "redis_port")
+	slog.Debug("GET /redis")
+	redisHost := ""
+	redisPort := ""
+
+	creds, err := terraminogo.GetSecret(t.appName + "-redis")
+	if err == nil {
+		redisHost = creds.IP
+		redisPort = creds.Port
+	}
 
 	redisPing := "No connection"
 	redisClient := t.getRedisClient()
